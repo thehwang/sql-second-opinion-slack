@@ -59,45 +59,54 @@ def post_message(
     client.chat_postMessage(channel=dm, text=note + text, **kwargs)
 
 
-@app.command("/sql")
-def handle_sql_command(ack, body, client):
-    ack()
-    channel_id = body["channel_id"]
-    user_id = body["user"]["id"]
+def _handle_sql_ack(ack, body, client) -> None:
     inline_sql = (body.get("text") or "").strip()
-    thread_ts = body.get("thread_ts")
+    if not inline_sql:
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=build_modal(channel_id=body["channel_id"]),
+        )
+    ack()
 
-    if inline_sql:
-        post_message(
-            client,
-            channel_id=channel_id,
-            user_id=user_id,
-            text=f"<@{user_id}> submitted SQL for analysis — running sqlucent…",
-            thread_ts=thread_ts,
-        )
-        text = analyze_and_format(inline_sql, requested_by=user_id)
-        post_message(
-            client,
-            channel_id=channel_id,
-            user_id=user_id,
-            text=text,
-            thread_ts=thread_ts,
-        )
+
+def _handle_sql_work(body, client) -> None:
+    inline_sql = (body.get("text") or "").strip()
+    if not inline_sql:
         return
 
-    client.views_open(
-        trigger_id=body["trigger_id"],
-        view=build_modal(channel_id=channel_id),
+    channel_id = body["channel_id"]
+    user_id = body["user"]["id"]
+    thread_ts = body.get("thread_ts")
+
+    post_message(
+        client,
+        channel_id=channel_id,
+        user_id=user_id,
+        text=f"<@{user_id}> submitted SQL for analysis — running sqlucent…",
+        thread_ts=thread_ts,
+    )
+    text = analyze_and_format(inline_sql, requested_by=user_id)
+    post_message(
+        client,
+        channel_id=channel_id,
+        user_id=user_id,
+        text=text,
+        thread_ts=thread_ts,
     )
 
 
-@app.view(CALLBACK_ID)
-def handle_modal_submit(ack, body, client, view):
+app.command("/sql")(_handle_sql_ack, _handle_sql_work)
+
+
+def _handle_modal_submit_ack(ack) -> None:
     ack()
+
+
+def _handle_modal_submit(body, client, view) -> None:
     user_id = body["user"]["id"]
     try:
         sql, dialect, schema, channel_id = parse_submission(view)
-    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+    except (KeyError, ValueError, json.JSONDecodeError):
         logger.exception("bad modal payload")
         return
 
@@ -121,10 +130,15 @@ def handle_modal_submit(ack, body, client, view):
     )
 
 
-@app.shortcut(MESSAGE_SHORTCUT_ID)
-def handle_message_shortcut(ack, shortcut, client):
-    """Analyze SQL from an existing message (right-click → Shortcuts)."""
+app.view(CALLBACK_ID)(_handle_modal_submit_ack, _handle_modal_submit)
+
+
+def _handle_message_shortcut_ack(ack) -> None:
     ack()
+
+
+def _handle_message_shortcut(shortcut, client) -> None:
+    """Analyze SQL from an existing message (right-click → Shortcuts)."""
     user_id = shortcut["user"]["id"]
     message = shortcut["message"]
     channel_id = shortcut["channel"]["id"]
@@ -160,12 +174,16 @@ def handle_message_shortcut(ack, shortcut, client):
     )
 
 
+app.shortcut(MESSAGE_SHORTCUT_ID)(_handle_message_shortcut_ack, _handle_message_shortcut)
+
+
 def create_flask_app() -> Flask:
     flask_app = Flask(__name__)
     handler = SlackRequestHandler(app)
 
     @flask_app.route("/slack/events", methods=["POST"])
     def slack_events():
+        logger.info("POST /slack/events")
         return handler.handle(request)
 
     @flask_app.route("/health", methods=["GET"])
@@ -178,14 +196,20 @@ def create_flask_app() -> Flask:
 def main() -> None:
     app_token = os.environ.get("SLACK_APP_TOKEN")
     if app_token:
-        logger.info("Starting Socket Mode handler")
+        logger.info(
+            "Starting Socket Mode (disable Socket Mode in Slack if using HTTP URLs on Render)"
+        )
         SocketModeHandler(app, app_token).start()
         return
 
     port = int(os.environ.get("PORT", "3000"))
     flask_app = create_flask_app()
-    logger.info("Starting HTTP server on port %s", port)
-    flask_app.run(host="0.0.0.0", port=port)
+    logger.info(
+        "Starting HTTP server on port %s — Slack Request URL must be "
+        "https://<host>/slack/events and Socket Mode must be OFF",
+        port,
+    )
+    flask_app.run(host="0.0.0.0", port=port, threaded=True)
 
 
 if __name__ == "__main__":
