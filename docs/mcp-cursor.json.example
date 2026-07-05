@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "sql-second-opinion": {
+      "command": "python",
+      "args": ["-m", "mcp_server"],
+      "cwd": "/ABSOLUTE/PATH/TO/sql-second-opinion-slack",
+      "env": {}
+    }
+  }
+}

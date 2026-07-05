@@ -16,6 +16,14 @@ class AnalysisResult:
     lint: str
     dialect: str
 
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "dialect": self.dialect,
+            "walkthrough": self.walkthrough,
+            "lineage": self.lineage,
+            "lint": self.lint,
+        }
+
 
 class SqlucentError(Exception):
     """sqlucent failed or is not installed."""

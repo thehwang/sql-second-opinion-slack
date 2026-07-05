@@ -70,15 +70,44 @@ app/
   modal.py         # Modal JSON
   runner.py        # sqlucent subprocess wrapper
   format_reply.py  # Slack message formatting
+mcp_server/        # MCP stdio server (explain_sql tool)
 sample/            # Demo SQL
 ```
+
+## MCP server (`explain_sql`)
+
+Same sqlucent analysis as the Slack bot, exposed as one MCP tool for Cursor,
+Claude Desktop, or any MCP client.
+
+```bash
+# from repo root, venv activated
+python -m mcp_server
+```
+
+**Cursor** — add to MCP settings (replace `cwd` with your clone path):
+
+```json
+{
+  "mcpServers": {
+    "sql-second-opinion": {
+      "command": "python",
+      "args": ["-m", "mcp_server"],
+      "cwd": "/path/to/sql-second-opinion-slack"
+    }
+  }
+}
+```
+
+See `docs/mcp-cursor.json.example`. Tool arguments: `sql` (required),
+`dialect` (default `bigquery`), optional `schema_ddl`. Returns JSON with
+`walkthrough`, `lineage`, `lint`, and `dialect` (or `{ "error": "..." }`).
 
 ## Hackathon checklist
 
 - [ ] Developer sandbox URL in Devpost
 - [ ] Invite `slackhack@salesforce.com` and `testing@devpost.com`
 - [ ] ~3 min demo video (`/sql` → walkthrough + lint flag)
-- [ ] Architecture diagram (Slack → Bolt → sqlucent CLI)
+- [ ] Architecture diagram (Slack → Bolt → sqlucent CLI; MCP → explain_sql)
 - [ ] Deploy app host with `sqlucent` on PATH (Railway, Fly.io, etc.)
 
 ## Related projects
