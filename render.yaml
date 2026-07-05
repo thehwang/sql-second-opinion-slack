@@ -3,11 +3,11 @@ services:
     name: sql-second-opinion-slack
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: >-
-      python -m gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4
-      app.wsgi:application
+    startCommand: python -m app.main
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: SLACK_BOT_TOKEN
         sync: false
       - key: SLACK_SIGNING_SECRET
