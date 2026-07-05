@@ -9,14 +9,19 @@ Built for the [Slack Agent Builder Challenge](https://slackhack.devpost.com/).
 
 ## How it works
 
-1. Type `/sql` in any channel where the app is installed.
-2. Paste SQL in the modal (optional schema DDL for `SELECT *` expansion).
-3. The app runs `sqlucent --walkthrough`, `--lineage`, and `--lint`.
-4. Results post back to the channel as structured markdown.
+Two ways to analyze SQL:
+
+1. **`/sql`** — paste SQL two ways:
+   - **Inline:** `/sql SELECT 1` (one line; good for quick probes)
+   - **Modal:** `/sql` alone → form opens for multi-line SQL, dialect, optional schema
+2. **Message shortcut** — someone posted SQL in a code block; hover that message →
+   **More actions** → **Analyze SQL in message**. Results reply in the thread.
 
 ```
 You:  /sql  →  [modal: paste SQL]
-Bot:  Walkthrough · Lineage · Risks (all from sqlucent stdout)
+Colleague: posts ```sql … ``` in channel
+You:  right-click message → Analyze SQL in message
+Bot:  Walkthrough · Lineage · Risks (reply in thread)
 ```
 
 ## Quick start (local)
@@ -29,7 +34,8 @@ Create an app at [api.slack.com/apps](https://api.slack.com/apps):
 |---------|--------|
 | **Slash command** | `/sql` → Request URL `https://<your-host>/slack/events` |
 | **Interactivity** | same URL |
-| **Bot scopes** | `commands`, `chat:write` |
+| **Message shortcut** | **Analyze SQL in message** → Callback ID `analyze_sql_message` |
+| **Bot scopes** | `commands`, `chat:write`, `chat:write.public`, `im:write` |
 | **Install** | to your dev workspace |
 
 For local dev, expose port 3000 with [ngrok](https://ngrok.com/) and use the

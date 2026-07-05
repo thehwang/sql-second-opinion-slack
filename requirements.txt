@@ -1,3 +1,4 @@
 slack-bolt>=1.21.0
 sqlucent>=0.2.0
 flask>=3.0.0
+python-dotenv>=1.0.0
