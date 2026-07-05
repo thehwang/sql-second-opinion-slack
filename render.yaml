@@ -4,8 +4,7 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: >-
-      python -m gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4
-      "app.main:create_flask_app()" --factory
+      python -m gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 wsgi:application
     healthCheckPath: /health
     envVars:
       - key: SLACK_BOT_TOKEN
