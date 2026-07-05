@@ -4,7 +4,7 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: >-
-      gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4
+      python -m gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4
       "app.main:create_flask_app()" --factory
     healthCheckPath: /health
     envVars:
