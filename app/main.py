@@ -31,6 +31,13 @@ app = App(
 )
 
 
+def _user_id_from_body(body: dict) -> str:
+    """Slash commands expose user_id; modals/shortcuts use user.id."""
+    if body.get("user_id"):
+        return str(body["user_id"])
+    return str(body["user"]["id"])
+
+
 def post_message(
     client,
     *,
@@ -75,24 +82,28 @@ def _handle_sql_work(body, client) -> None:
         return
 
     channel_id = body["channel_id"]
-    user_id = body["user"]["id"]
+    user_id = _user_id_from_body(body)
     thread_ts = body.get("thread_ts")
 
-    post_message(
-        client,
-        channel_id=channel_id,
-        user_id=user_id,
-        text=f"<@{user_id}> submitted SQL for analysis — running sqlucent…",
-        thread_ts=thread_ts,
-    )
-    text = analyze_and_format(inline_sql, requested_by=user_id)
-    post_message(
-        client,
-        channel_id=channel_id,
-        user_id=user_id,
-        text=text,
-        thread_ts=thread_ts,
-    )
+    try:
+        post_message(
+            client,
+            channel_id=channel_id,
+            user_id=user_id,
+            text=f"<@{user_id}> submitted SQL for analysis — running sqlucent…",
+            thread_ts=thread_ts,
+        )
+        text = analyze_and_format(inline_sql, requested_by=user_id)
+        post_message(
+            client,
+            channel_id=channel_id,
+            user_id=user_id,
+            text=text,
+            thread_ts=thread_ts,
+        )
+    except Exception:
+        logger.exception("failed inline /sql analysis")
+        raise
 
 
 app.command("/sql")(_handle_sql_ack, _handle_sql_work)
@@ -103,11 +114,11 @@ def _handle_modal_submit_ack(ack) -> None:
 
 
 def _handle_modal_submit(body, client, view) -> None:
-    user_id = body["user"]["id"]
+    user_id = _user_id_from_body(body)
     try:
         sql, dialect, schema, channel_id = parse_submission(view)
     except (KeyError, ValueError, json.JSONDecodeError):
-        logger.exception("bad modal payload")
+        logger.exception("bad modal payload in _handle_modal_submit")
         return
 
     post_message(
